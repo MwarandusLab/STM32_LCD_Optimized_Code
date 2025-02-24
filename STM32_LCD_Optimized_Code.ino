@@ -102,7 +102,7 @@ void LCD_Init(void) {
     HAL_Delay(2);
 }
 
-void LCD_SetCursor(uint8_t row, uint8_t col) {
+void LCD_SetCursor(uint8_t col, uint8_t row) {
     const uint8_t row_offsets[] = {0x00, 0x40, 0x14, 0x54};
     LCD_SendCommand(0x80 | (col + row_offsets[row]));
 }
@@ -130,7 +130,7 @@ void setup() {
 }
 
 void loop() {
-    lcd_setCursor(2, 4);
+    lcd_setCursor(2, 3);
     LCD_Print("Running Loop...");
     HAL_Delay(1000);
 
