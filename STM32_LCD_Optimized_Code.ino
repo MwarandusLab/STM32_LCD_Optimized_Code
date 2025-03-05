@@ -2,21 +2,17 @@
 
 #define LCD_ADDR 0x27 << 1 // Typical I2C address for PCF8574 backpack
 
-I2C_HandleTypeDef hi2c1;// here we initialize the I2C1 HANDLE
+I2C_HandleTypeDef hi2c1;
 
-void SystemClock_Config(void);
-void I2C1_Init(void);
-void LCD_SendCommand(uint8_t cmd);
-void LCD_SendData(uint8_t data);
-void LCD_Init(void);
-void LCD_SetCursor(uint8_t row, uint8_t col);
-void LCD_Print(const char *str);
-void LCD_SendNibble(uint8_t nibble, uint8_t rs);
-void LCD_Clear(void);
-
-// Alias for familiar function names
-#define lcd_clear() LCD_Clear()
-#define lcd_setCursor(row, col) LCD_SetCursor(row, col)
+void systemClockConfig(void);
+void i2c1Init(void);
+void lcd_sendCommand(uint8_t cmd);
+void lcd_sendData(uint8_t data);
+void lcd_init(void);
+void lcd_setCursor(uint8_t row, uint8_t col);
+void lcd_print(const char *str);
+void lcd_sendNibble(uint8_t nibble, uint8_t rs);
+void lcd_clear(void);
 
 int main(void) {
     setup();
@@ -25,7 +21,7 @@ int main(void) {
     }
 }
 
-void SystemClock_Config(void) {
+void systemClockConfig(void) {
     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
@@ -45,12 +41,12 @@ void SystemClock_Config(void) {
     HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2);
 }
 
-void I2C1_Init(void) {
+void i2c1Init(void) {
     __HAL_RCC_I2C1_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
     GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7; // SCL = PB6, SDA = PB7
+    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -66,76 +62,79 @@ void I2C1_Init(void) {
     HAL_I2C_Init(&hi2c1);
 }
 
-void LCD_SendNibble(uint8_t nibble, uint8_t rs) {
-    uint8_t data = (nibble << 4) | (rs ? 0x01 : 0x00) | 0x08; // Backlight on
+void lcd_sendNibble(uint8_t nibble, uint8_t rs) {
+    uint8_t data = (nibble << 4) | (rs ? 0x01 : 0x00) | 0x08;
     HAL_I2C_Master_Transmit(&hi2c1, LCD_ADDR, &data, 1, HAL_MAX_DELAY);
     HAL_Delay(1);
-    data |= 0x04; // Enable pin high
+    data |= 0x04;
     HAL_I2C_Master_Transmit(&hi2c1, LCD_ADDR, &data, 1, HAL_MAX_DELAY);
     HAL_Delay(1);
-    data &= ~0x04; // Enable pin low
+    data &= ~0x04;
     HAL_I2C_Master_Transmit(&hi2c1, LCD_ADDR, &data, 1, HAL_MAX_DELAY);
-    HAL_Delay(1); // i will use hal delay for now rather that Low level for fast initializing
+    HAL_Delay(1);
 }
 
-void LCD_SendCommand(uint8_t cmd) {
-    LCD_SendNibble(cmd >> 4, 0);
-    LCD_SendNibble(cmd & 0x0F, 0);
+void lcd_sendCommand(uint8_t cmd) {
+    lcd_sendNibble(cmd >> 4, 0);
+    lcd_sendNibble(cmd & 0x0F, 0);
 }
 
-void LCD_SendData(uint8_t data) {
-    LCD_SendNibble(data >> 4, 1);
-    LCD_SendNibble(data & 0x0F, 1);
+void lcd_sendData(uint8_t data) {
+    lcd_sendNibble(data >> 4, 1);
+    lcd_sendNibble(data & 0x0F, 1);
 }
 
-void LCD_Init(void) {
+void lcd_init(void) {
     HAL_Delay(50);
-    LCD_SendNibble(0x03, 0);  //we are setting the cursor
+    lcd_sendNibble(0x03, 0);
     HAL_Delay(5);
-    LCD_SendNibble(0x03, 0);
+    lcd_sendNibble(0x03, 0);
     HAL_Delay(1);
-    LCD_SendNibble(0x03, 0);
-    LCD_SendNibble(0x02, 0);
-    LCD_SendCommand(0x28); // 4-bit mode, 2 lines, 5x8 dots
-    LCD_SendCommand(0x0C); // Display on, cursor off, blink off
-    LCD_SendCommand(0x01); // Clear display
+    lcd_sendNibble(0x03, 0);
+    lcd_sendNibble(0x02, 0);
+    lcd_sendCommand(0x28);
+    lcd_sendCommand(0x0C);
+    lcd_sendCommand(0x01);
     HAL_Delay(2);
 }
 
-void LCD_SetCursor(uint8_t col, uint8_t row) {
+void lcd_setCursor(uint8_t col, uint8_t row) {
     const uint8_t row_offsets[] = {0x00, 0x40, 0x14, 0x54};
-    LCD_SendCommand(0x80 | (col + row_offsets[row]));
+    lcd_sendCommand(0x80 | (col + row_offsets[row]));
 }
 
-void LCD_Clear(void) {
-    LCD_SendCommand(0x01); // Clear display
-    HAL_Delay(2);          // Clear command requires a delay
-    LCD_SetCursor(0, 0);   // Reset cursor to home position
+void lcd_clear(void) {
+    lcd_sendCommand(0x01);
+    HAL_Delay(2);
+    lcd_setCursor(0, 0);
 }
 
-void LCD_Print(const char *str) {
+void lcd_print(const char *str) {
     while (*str) {
-        LCD_SendData(*str++);
+        lcd_sendData(*str++);
     }
 }
 
 void setup() {
     HAL_Init();   
-    SystemClock_Config();
-    I2C1_Init();
-    LCD_Init();
+    systemClockConfig();
+    i2c1Init();
+    lcd_init();
 
     lcd_setCursor(0, 0);
-    LCD_Print("Setup Complete!");
+    lcd_print("Setup Complete!");
+}
+void delay(uint32_t ms) {
+    HAL_Delay(ms);
 }
 
 void loop() {
     lcd_setCursor(2, 3);
-    LCD_Print("Running Loop...");
-    HAL_Delay(1000);
+    lcd_print("Running Loop...");
+    delay(1000);
 
     lcd_clear();
     lcd_setCursor(1, 0);
-    LCD_Print("Cleared Display!");
-    HAL_Delay(1000);
+    lcd_print("Cleared Display!");
+    delay(1000);
 }
