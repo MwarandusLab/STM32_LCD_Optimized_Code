@@ -8,11 +8,27 @@ void systemClockConfig(void);
 void i2c1Init(void);
 void lcd_sendCommand(uint8_t cmd);
 void lcd_sendData(uint8_t data);
-void lcd_init(void);
-void lcd_setCursor(uint8_t row, uint8_t col);
-void lcd_print(const char *str);
 void lcd_sendNibble(uint8_t nibble, uint8_t rs);
+
+typedef struct {
+    void (*init)(void);
+    void (*clear)(void);
+    void (*setCursor)(uint8_t row, uint8_t col);
+    void (*print)(const char *str);
+} LCD_TypeDef;
+
+void lcd_init(void);
 void lcd_clear(void);
+void lcd_setCursor(uint8_t col, uint8_t row);
+void lcd_print(const char *str);
+
+// LCD object
+LCD_TypeDef lcd = {
+    .init = lcd_init,
+    .clear = lcd_clear,
+    .setCursor = lcd_setCursor,
+    .print = lcd_print
+};
 
 int main(void) {
     setup();
@@ -119,22 +135,23 @@ void setup() {
     HAL_Init();   
     systemClockConfig();
     i2c1Init();
-    lcd_init();
+    lcd.init();
 
-    lcd_setCursor(0, 0);
-    lcd_print("Setup Complete!");
+    lcd.setCursor(0, 0);
+    lcd.print("Setup Complete!");
 }
+
 void delay(uint32_t ms) {
     HAL_Delay(ms);
 }
 
 void loop() {
-    lcd_setCursor(2, 3);
-    lcd_print("Running Loop...");
+    lcd.setCursor(2, 3);
+    lcd.print("Running Loop...");
     delay(1000);
 
-    lcd_clear();
-    lcd_setCursor(1, 0);
-    lcd_print("Cleared Display!");
+    lcd.clear();
+    lcd.setCursor(1, 0);
+    lcd.print("Cleared Display!");
     delay(1000);
 }
